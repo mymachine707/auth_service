@@ -147,7 +147,7 @@ func (stg Postgres) UpdateUser(user *blogpost.UpdateUserRequest) error {
 // DeleteUser ...
 func (stg Postgres) DeleteUser(idStr string) error {
 
-	res, err := stg.db.Exec("UPDATE user Set deleted_at=now() WHERE id=$1 AND deleted_at is null", idStr)
+	res, err := stg.db.Exec(`UPDATE "user" Set deleted_at=now() WHERE id=$1 AND deleted_at is null`, idStr)
 
 	if err != nil {
 		return err
