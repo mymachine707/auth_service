@@ -7,3 +7,4 @@ CREATE TABLE "user" (
    "updated_at" TIMESTAMP,
    "deleted_at" TIMESTAMP
 );
+
