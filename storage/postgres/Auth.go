@@ -48,7 +48,7 @@ func (stg Postgres) GetUserByID(id string) (*blogpost.User, error) {
 	created_at,
 	updated_at,
 	deleted_at
-    FROM user WHERE id = $1`, id).Scan(
+    FROM "user" WHERE id = $1`, id).Scan(
 		&res.Id,
 		&res.Username,
 		&res.Password,
@@ -84,11 +84,10 @@ func (stg Postgres) GetUserList(offset, limit int, search string) (*blogpost.Get
 	created_at,
 	updated_at,
 	deleted_at
-	FROM user WHERE deleted_at is null AND
+	FROM "user" WHERE deleted_at is null AND
 	(username ILIKE '%' || $1 || '%') 
 	LIMIT $2
 	OFFSET $3
-	
 	`, search, limit, offset)
 
 	if err != nil {
@@ -121,7 +120,7 @@ func (stg Postgres) GetUserList(offset, limit int, search string) (*blogpost.Get
 // UpdateUser ...
 func (stg Postgres) UpdateUser(user *blogpost.UpdateUserRequest) error {
 
-	res, err := stg.db.NamedExec(`UPDATE user SET password=:p
+	res, err := stg.db.NamedExec(`UPDATE "user" SET password=:p
 	, updated_at=now() WHERE id=:id AND deleted_at is null`, map[string]interface{}{
 		"id": user.Id,
 		"p":  user.Password,

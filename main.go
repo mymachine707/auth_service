@@ -10,7 +10,7 @@ import (
 
 	"mymachine707/config"
 	blogpost "mymachine707/protogen/blogpost"
-	"mymachine707/services/article"
+	user "mymachine707/services/auth"
 	"mymachine707/storage"
 	"mymachine707/storage/postgres"
 
@@ -24,6 +24,7 @@ func initGRPC(cfg config.Config, stg storage.Interfaces) {
 
 // @license.name Apache 2.0
 func main() {
+
 	cfg := config.Load()
 
 	psqlConfigString := fmt.Sprintf(
@@ -55,8 +56,8 @@ func main() {
 	}
 	s := grpc.NewServer()
 
-	ArticleService := article.NewArticleService(stg)
-	blogpost.RegisterArticleServiceServer(s, ArticleService)
+	authService := user.NewAuthService(stg)
+	blogpost.RegisterUserServiceServer(s, authService)
 
 	reflection.Register(s)
 	if err := s.Serve(listener); err != nil {
