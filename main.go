@@ -18,10 +18,6 @@ import (
 	"github.com/swaggo/swag/example/basic/docs"
 )
 
-func initGRPC(cfg config.Config, stg storage.Interfaces) {
-
-}
-
 // @license.name Apache 2.0
 func main() {
 
