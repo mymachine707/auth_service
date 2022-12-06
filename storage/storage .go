@@ -12,4 +12,6 @@ type Interfaces interface {
 	GetUserList(offset, limit int, search string) (resp *blogpost.GetUserListResponse, err error)
 	UpdateUser(User *blogpost.UpdateUserRequest) error
 	DeleteUser(idStr string) error
+
+	GetUserByUsername(username string) (*blogpost.User, error)
 }

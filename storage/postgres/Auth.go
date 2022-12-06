@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	// "mymachine707/blogpost"
@@ -53,9 +54,14 @@ func (stg Postgres) GetUserByID(id string) (*blogpost.User, error) {
 		&res.Username,
 		&res.Password,
 		&res.UserType,
+		&res.CreatedAt,
 		&updatedAt,
 		&deletedAt,
 	)
+
+	if err != nil {
+		return res, err
+	}
 
 	if updatedAt != nil {
 		res.UpdatedAt = *updatedAt
@@ -82,8 +88,7 @@ func (stg Postgres) GetUserList(offset, limit int, search string) (*blogpost.Get
 	password,
 	user_type,
 	created_at,
-	updated_at,
-	deleted_at
+	updated_at
 	FROM "user" WHERE deleted_at is null AND
 	(username ILIKE '%' || $1 || '%') 
 	LIMIT $2
@@ -118,12 +123,11 @@ func (stg Postgres) GetUserList(offset, limit int, search string) (*blogpost.Get
 }
 
 // UpdateUser ...
-func (stg Postgres) UpdateUser(user *blogpost.UpdateUserRequest) error {
+func (stg Postgres) UpdateUser(entity *blogpost.UpdateUserRequest) error {
 
-	res, err := stg.db.NamedExec(`UPDATE "user" SET password=:p
-	, updated_at=now() WHERE id=:id AND deleted_at is null`, map[string]interface{}{
-		"id": user.Id,
-		"p":  user.Password,
+	res, err := stg.db.NamedExec(`UPDATE "user" SET password=:p, updated_at=now() WHERE deleted_at is null AND id=:id`, map[string]interface{}{
+		"id": entity.Id,
+		"p":  entity.Password,
 	})
 
 	if err != nil {
@@ -131,7 +135,6 @@ func (stg Postgres) UpdateUser(user *blogpost.UpdateUserRequest) error {
 	}
 
 	n, err := res.RowsAffected()
-
 	if err != nil {
 		return err
 	}
@@ -163,4 +166,45 @@ func (stg Postgres) DeleteUser(idStr string) error {
 	}
 
 	return errors.New("user not found")
+}
+
+// GetUserByUsername ...  //  ????
+func (stg Postgres) GetUserByUsername(username string) (*blogpost.User, error) {
+	// var res blogpost.GetUserByIDResponse
+	res := &blogpost.User{}
+	var deletedAt *time.Time
+	var updatedAt *string
+
+	err := stg.db.QueryRow(`SELECT 
+    	id,
+		username,
+		password,
+		user_type,
+		created_at,
+		updated_at,
+		deleted_at
+    FROM "user" WHERE username = $1`, username).Scan(
+		&res.Id,
+		&res.Username,
+		&res.Password,
+		&res.UserType,
+		&res.CreatedAt,
+		&updatedAt,
+		&deletedAt,
+	)
+
+	if err != nil {
+		return res, err
+	}
+
+	if updatedAt != nil {
+		res.UpdatedAt = *updatedAt
+	}
+
+	if deletedAt != nil {
+		fmt.Printf("deleted at: %s", deletedAt)
+		return res, errors.New("user not found")
+	}
+
+	return res, err
 }

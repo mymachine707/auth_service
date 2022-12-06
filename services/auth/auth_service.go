@@ -2,109 +2,79 @@ package user
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"mymachine707/protogen/blogpost"
-	"mymachine707/storage"
+	"mymachine707/util"
+	"time"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-type userService struct {
-	stg storage.Interfaces
-	blogpost.UnimplementedUserServiceServer
-}
-
-func NewAuthService(stg storage.Interfaces) *userService {
-	return &userService{
-		stg: stg,
+func (s *userService) Login(ctx context.Context, req *blogpost.LoginUserRequest) (*blogpost.TokenResponse, error) {
+	log.Println("Login...")
+	fmt.Println(req)
+	errAuth := errors.New("Username or Password wrong")
+	// requsetdan kevotgan username bilan bazadigi username qidirib topiladi
+	user, err := s.stg.GetUserByUsername(req.Username)
+	if err != nil {
+		log.Println(err.Error())
+		return nil, status.Errorf(codes.Unauthenticated, errAuth.Error())
 	}
-}
 
-func (s *userService) Ping(ctx context.Context, req *blogpost.Empty) (*blogpost.Pong, error) {
-	log.Println("Ping")
+	// requsetdan kevotgan password bilan bazadan kegan username passwordini solishtiriladi.
+	match, err := util.ComparePassword(user.Password, req.Password)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, " s.stg.GetUserByUsername: %s", err.Error())
+	}
 
-	return &blogpost.Pong{
-		Message: "Ok",
+	if !match {
+		return nil, status.Errorf(codes.Unauthenticated, errAuth.Error())
+	}
+
+	//Token generator
+	m := map[string]interface{}{
+		"user_id":  user.Id,
+		"username": user.Username,
+	}
+
+	token, err := util.GenerateJWT(m, time.Minute*10, s.cfg.SECRET_KEY)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, " util.GenerateJWT: %s", err.Error())
+	}
+
+	return &blogpost.TokenResponse{
+		Token: token,
 	}, nil
 }
 
-func (s *userService) CreateUser(ctx context.Context, req *blogpost.CreateUserRequest) (*blogpost.User, error) {
-	fmt.Println("<<< ---- CreateUser ---->>>")
+func (s *userService) HasAccess(ctx context.Context, req *blogpost.TokenRequest) (*blogpost.HasAccessResponse, error) {
+	log.Println("HasAccess...")
 
-	// Todo password hash
-
-	id := uuid.New()
-
-	err := s.stg.AddUser(id.String(), req)
+	result, err := util.ParseClaims(req.Token, s.cfg.SECRET_KEY)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "s.stg.AddUser: %s", err.Error())
+		log.Println(status.Errorf(codes.PermissionDenied, " util.ParseClaims: %s", err.Error()))
+		return &blogpost.HasAccessResponse{
+			User:      nil,
+			HasAccess: false,
+		}, nil
 	}
 
-	user, err := s.stg.GetUserByID(id.String()) // maqsad tekshirish rostan  ham create bo'ldimi?
+	log.Println(result.Username)
+
+	user, err := s.stg.GetUserByID(result.UserID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "s.stg.GetUserByID: %s", err.Error())
+		log.Println(status.Errorf(codes.PermissionDenied, " util.ParseClaims: %s", err.Error()))
+		return &blogpost.HasAccessResponse{
+			User:      user,
+			HasAccess: false,
+		}, nil
 	}
 
-	return user, nil
-}
-
-func (s *userService) UpdateUser(ctx context.Context, req *blogpost.UpdateUserRequest) (*blogpost.User, error) {
-	fmt.Println("<<< ---- UpdateUser ---->>>")
-	// Todo password hash
-
-	err := s.stg.UpdateUser(req)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "s.stg.UpdateUser: %s", err.Error())
-	}
-
-	user, err := s.stg.GetUserByID(req.Id) // maqsad tekshirish rostan  ham create bo'ldimi?
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "s.stg.GetUserByID---!: %s", err.Error())
-	}
-
-	return user, nil
-}
-
-func (s *userService) DeleteUser(ctx context.Context, req *blogpost.DeleteUserRequest) (*blogpost.User, error) {
-	fmt.Println("<<< ---- DeleteUser ---- >>>")
-
-	user, err := s.stg.GetUserByID(req.Id) // maqsad tekshirish rostan  ham create bo'ldimi?
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "s.stg.GetUserByID: %s", err.Error())
-	}
-
-	err = s.stg.DeleteUser(req.Id)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "s.stg.DeleteUser: %s", err.Error())
-	}
-
-	return user, nil
-}
-
-func (s *userService) GetUserList(ctx context.Context, req *blogpost.GetUserListRequest) (*blogpost.GetUserListResponse, error) {
-	fmt.Println("<<< ---- GetUserList ---->>>")
-
-	res, err := s.stg.GetUserList(int(req.Offset), int(req.Limit), req.Search)
-
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "s.stg.GetUserList: %s", err.Error())
-	}
-
-	return res, nil
-}
-func (s *userService) GetUserById(ctx context.Context, req *blogpost.GetUserByIDRequest) (*blogpost.User, error) {
-	fmt.Println("<<< ---- GetUserById ---->>>")
-
-	user, err := s.stg.GetUserByID(req.Id)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "s.stg.GetUserByID: %s", err.Error())
-	}
-
-	return user, nil
+	return &blogpost.HasAccessResponse{
+		User:      user,
+		HasAccess: true,
+	}, nil
 }

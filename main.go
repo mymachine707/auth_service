@@ -47,7 +47,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("gRPC server tutorial in Go in GRPCPort: %s", cfg.GRPCPort)
+	fmt.Printf("gRPC server tutorial in Go in GRPCPort: %s \n", cfg.GRPCPort)
 
 	listener, err := net.Listen("tcp", cfg.GRPCPort)
 
@@ -56,7 +56,7 @@ func main() {
 	}
 	s := grpc.NewServer()
 
-	authService := user.NewAuthService(stg)
+	authService := user.NewAuthService(cfg, stg)
 	blogpost.RegisterUserServiceServer(s, authService)
 
 	reflection.Register(s)
