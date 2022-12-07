@@ -40,7 +40,7 @@ func (s *userService) Login(ctx context.Context, req *blogpost.LoginUserRequest)
 		"username": user.Username,
 	}
 
-	token, err := util.GenerateJWT(m, 15*time.Minute, s.cfg.SECRET_KEY)
+	token, err := util.GenerateJWT(m, 1*time.Hour, s.cfg.SECRET_KEY)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, " util.GenerateJWT: %s", err.Error())
 	}
