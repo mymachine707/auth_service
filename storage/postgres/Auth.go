@@ -11,6 +11,7 @@ import (
 
 // AddUser ...
 func (stg Postgres) AddUser(id string, entity *blogpost.CreateUserRequest) error {
+	fmt.Println(entity.UserType, len(entity.UserType))
 	_, err := stg.db.Exec(`INSERT INTO "user" (
 		id,
 		username,

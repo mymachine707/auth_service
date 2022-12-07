@@ -39,6 +39,7 @@ func (s *userService) CreateUser(ctx context.Context, req *blogpost.CreateUserRe
 	fmt.Println("<<< ---- CreateUser ---->>>")
 	id := uuid.New()
 
+	fmt.Println(req.UserType, len(req.UserType))
 	hashedPassword, err := util.HashPassword(req.Password)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, " util.HashPassword: %s", err.Error())
